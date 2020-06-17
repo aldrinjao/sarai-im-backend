@@ -1,3 +1,5 @@
+Upgraded SARAI Interactive Maps Backend implemented using GEE API + Flask.
+
 # Installation of Requirements
 1. All Operating Systems
 2. Python 3.6
