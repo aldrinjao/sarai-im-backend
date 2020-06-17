@@ -5,7 +5,7 @@ Upgraded SARAI Interactive Maps Backend implemented using GEE API + Flask.
 2. Python 3.6
 
 ## Ubuntu
-1. Install Pip: `sudo apt-get install python-pip3`
+1. Install Pip: `sudo apt-get install python3-pip`
 2. Install VirtualENV: `pip3 install virtualenv`
 
 ## Running
