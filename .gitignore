@@ -1,2 +1,5 @@
 *.json
 conf/
+.vscode
+__pycache__
+venv
