@@ -233,7 +233,7 @@ def time_series(lat, lng, start_date, end_date):
 @cross_origin()
 @gzipped
 def day_of_the_year(lat, lng, start_date, end_date):
-    query_result = query_doy_data(lat, lng, start_date, end_date)
+    query_result = list(query_doy_data(lat, lng, start_date, end_date))
     output_format = 'json'
     available_formats = ['json', 'csv']
     requested_format = request.args.get('fmt')

@@ -16,7 +16,7 @@ EE_CREDENTIALS = credentials
 @bp.route('/', methods=["GET"])
 def indexa():
 
-    return 'CHIRPS ENDPOINT'
+    return 'CHIRPS ENDPOINTaaaaaaaa'
 
 
 def accumulate(image, ee_list):
@@ -83,32 +83,32 @@ def query_daily_rainfall_data(lat, lng, start_date, end_date):
 
     # final_result = cache.get(cache_key)
 
-    if final_result is None:
-        ee.Initialize(EE_CREDENTIALS)
 
-        # create a geometry point instance for cropping data later
-        point = ee.Geometry.Point(float(lng), float(lat))
+    ee.Initialize(EE_CREDENTIALS)
 
-        image_collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
-        filtering_result = image_collection.filterDate(start_date, end_date)
+    # create a geometry point instance for cropping data later
+    point = ee.Geometry.Point(float(lng), float(lat))
 
-        # check if there are features retrieved
-        if len(filtering_result.getInfo()['features']) == 0:
-            return None
+    image_collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
+    filtering_result = image_collection.filterDate(start_date, end_date)
 
-        # precipitation should be casted to float or else
-        # it will throw error about incompatible types
-        result = filtering_result.cast({'precipitation': 'float'}, [
-                                       'precipitation']).getRegion(point, 500).getInfo()
+    # check if there are features retrieved
+    if len(filtering_result.getInfo()['features']) == 0:
+        return None
 
-        # remove the headers from the
-        result.pop(0)
+    # precipitation should be casted to float or else
+    # it will throw error about incompatible types
+    result = filtering_result.cast({'precipitation': 'float'}, [
+                                    'precipitation']).getRegion(point, 500).getInfo()
 
-        # transform the data
-        final_result = map(rainfall_mapper, result)
+    # remove the headers from the
+    result.pop(0)
 
-        # cache it for 12 hours
-        # cache.set(cache_key, final_result, timeout=43200)
+    # transform the data
+    final_result = map(rainfall_mapper, result)
+
+    # cache it for 12 hours
+    # cache.set(cache_key, final_result, timeout=43200)
 
     return final_result
 
@@ -150,7 +150,7 @@ def query_cumulative_rainfall_data(lat, lng, start_date, end_date):
         result.pop(0)
 
         # transform the data
-        final_result = map(cumulative_mapper, result)
+        final_result = list(map(cumulative_mapper, result))
 
         # delete the first item if the rainfall_0p is not none
         if final_result[0]['rainfall_0p'] is not None:
@@ -174,7 +174,6 @@ def query_cumulative_rainfall_data(lat, lng, start_date, end_date):
 # @cache.cached(timeout=43200, key_prefix=rainfall_cache_key)
 def index(start_date, end_date):
     ee.Initialize(EE_CREDENTIALS)
-    print('2222222222222222222222222222222222222')
     geometry = ee.Geometry.Polygon(
         ee.List([
             [127.94248139921513, 5.33459854167601],
@@ -239,3 +238,109 @@ def index(start_date, end_date):
 
     print(map_tilefetch)
     return jsonify(**result)
+
+
+
+
+@bp.route('/daily-rainfall/<lat>/<lng>/<start_date>/<end_date>', methods=['GET'])
+@cross_origin()
+@gzipped
+def daily_rainfall(lat, lng, start_date, end_date):
+  query_result = list(query_daily_rainfall_data(lat, lng, start_date, end_date))
+  output_format = 'json'
+  available_formats = ['json', 'csv']
+  requested_format = request.args.get('fmt')
+
+  if requested_format is not None:
+    # abort the request and throw HTTP 400 since the format
+    # is not on the list of available formats
+    if not requested_format in available_formats:
+      abort(400, 'Unsupported format')
+
+    # override the default output format
+    output_format = requested_format
+
+  # abort the request if the query_result contains None value
+  if query_result is None:
+    abort(404, 'Rainfall data not found')
+
+  response = None
+
+  if output_format == 'json':
+    json_result = {
+      'success': True,
+      'result': query_result
+    }
+
+    response = jsonify(**json_result)
+  else:
+    si = StringIO.StringIO()
+    cw = csv.writer(si)
+
+    cw.writerow(['Date', 'Precipitation'])
+    for value in query_result:
+      cw.writerow([
+        value['time'],
+        value['rainfall']
+      ])
+
+    filename = 'dailt-rainfall-%s-%s-%s-%s' % (lat, lng, start_date, end_date)
+
+    response = make_response(si.getvalue())
+    response.headers['Content-Disposition'] = 'attachment; filename=%s.csv' % filename
+    response.headers['Content-type'] = 'text/csv'
+
+  return response
+
+# cache the result of this endpoint for 12 hours
+@bp.route('/cumulative-rainfall/<lat>/<lng>/<start_date>/<end_date>', methods=['GET'])
+@cross_origin()
+@gzipped
+def cumulative_rainfall(lat, lng, start_date, end_date):
+  query_result =  query_cumulative_rainfall_data(lat, lng, start_date, end_date)
+  output_format = 'json'
+  available_formats = ['json', 'csv']
+  requested_format = request.args.get('fmt')
+
+  if requested_format is not None:
+    # abort the request and throw HTTP 400 since the format
+    # is not on the list of available formats
+    if not requested_format in available_formats:
+      abort(400, 'Unsupported format')
+
+    # override the default output format
+    output_format = requested_format
+
+  # abort the request if the query_result contains None value
+  if query_result is None:
+    abort(404, 'Rainfall data not found')
+
+  response = None
+
+  if output_format == 'json':
+    json_result = {
+      'success': True,
+      'result': query_result
+    }
+
+    response = jsonify(**json_result)
+  else:
+    si = StringIO.StringIO()
+    cw = csv.writer(si)
+
+    cw.writerow(['Date', 'Precipitation'])
+    for value in query_result:
+      cw.writerow([
+        value['time'],
+        value['rainfall']
+      ])
+
+    filename = 'cumulative-rainfall-%s-%s-%s-%s' % (lat, lng, start_date, end_date)
+
+    response = make_response(si.getvalue())
+    response.headers['Content-Disposition'] = 'attachment; filename=%s.csv' % filename
+    response.headers['Content-type'] = 'text/csv'
+
+  return response
+
+
