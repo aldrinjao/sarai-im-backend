@@ -146,7 +146,7 @@ python-mimeparse==1.6.0
 python-slugify==4.0.0
 pytz==2020.1
 pyxdg==0.25
-PyYAML==5.3.1
+PyYAML==5.4
 pyzmq==18.1.0
 qtconsole==4.5.2
 reportlab==3.4.0
